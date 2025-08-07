@@ -1,19 +1,39 @@
 'use client';
 
 import Link from 'next/link';
+import styled from 'styled-components';
 
+/*
+* styled components
+* This has FOUC (Flash of Unstyled Content) i.e. the content gets visible without style for flickering of seconds.
+* To avoid FOUC with styled-components in Next.js, use CSS Modules, global CSS or SSR.
+*/
+const StyledNav = styled.nav`
+  padding: 1rem;
+  border-bottom: 1px solid #ccc;
+`;
+
+const StyledLink = styled(Link)`
+  margin-right: 1rem;
+`;
+
+const StyledMain = styled.main`
+  padding: 1rem;
+`;
+
+/*
+* component
+*/
 export default function PokerLayout({ children }: { children: React.ReactNode }) {
   return (
     <div>
-      <nav style={{ padding: '1rem', borderBottom: '1px solid #ccc' }}>
-        <Link href="/poker" style={{ marginRight: '1rem' }}>Home</Link>
-        <Link href="/poker/about-us" style={{ marginRight: '1rem' }}>About Us</Link>
-        <Link href="/poker/connect-us">Connect Us</Link>
-      </nav>
+      <StyledNav>
+        <StyledLink href="/poker">Poker</StyledLink>
+        <StyledLink href="/poker/about-us">About-Poker</StyledLink>
+        <StyledLink href="/poker/connect-us">Connect-Poker</StyledLink>
+      </StyledNav>
 
-      <main style={{ padding: '1rem' }}>
-        {children}
-      </main>
+      <StyledMain>{children}</StyledMain>
     </div>
   );
 }

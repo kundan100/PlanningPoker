@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from 'next/link';
 import { Geist, Geist_Mono } from "next/font/google";
+import AppHeader from "./shared/components/layouts/AppHeader";
+import AppMenu from "./shared/components/layouts/AppMenu";
+import AppFooter from "./shared/components/layouts/AppFooter";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,47 +37,7 @@ export default function RootLayout({
   
   //
   const _helpers = {
-    getAppHeader: () => {
-      return (
-        <header style={{ background: '#111', color: '#fff', padding: '1rem' }}>
-          <h1>My App</h1>
-        </header>
-      );
-    },
-    getAppMenu: () => {
-      return(
-        <aside
-            style={{
-              width: '200px',
-              background: '#f4f4f4',
-              padding: '1rem',
-              borderRight: '1px solid #ccc',
-            }}
-          >
-            <nav>
-              <ul style={{ listStyle: 'none', padding: 0 }}>
-                <li><Link href="/">Dashboard</Link></li>
-                <li><Link href="/poker">Poker</Link></li>
-                {/* Add more modules here */}
-              </ul>
-            </nav>
-          </aside>
-      );
-    },
-    getAppFooter: () => {
-      return(
-        <footer
-          style={{
-            background: '#eee',
-            padding: '1rem',
-            borderTop: '1px solid #ccc',
-            textAlign: 'center',
-          }}
-        >
-          &copy; 2025 My App
-        </footer>
-      );
-    }
+    getTest: () => {}
   };
 
   //
@@ -85,19 +48,23 @@ export default function RootLayout({
   */
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable}`}
+        style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}
+      >
         {/* App-Header */}
-        {_helpers.getAppHeader()}
+        <AppHeader />
 
         {/* Main Content */}
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
+        <div style={{ display: 'flex', flex: 1 }}>
           {/* App-Menu */}
-          {_helpers.getAppMenu()}
+          <AppMenu />
           {/* Main Content */}
           <main style={{ flex: 1, padding: '1rem' }}>{children}</main>
         </div>
+
         {/* Footer */}
-        {_helpers.getAppFooter()}
+        <AppFooter />
       </body>
     </html>
   );

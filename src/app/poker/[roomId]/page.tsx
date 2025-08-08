@@ -7,6 +7,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Ably from 'ably';
+import '../../shared/styles/shared.css'
 
 export default function PokerRoom() {
   const { roomId } = useParams();
@@ -92,14 +93,70 @@ export default function PokerRoom() {
   }, [roomId, router]);
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h2>Poker Room: {roomId}</h2>
-      <h3>Participants:</h3>
-      <ul>
-        {participants.map((p) => (
-          <li key={p}>{p}</li>
-        ))}
-      </ul>
-    </div>
+    <>
+      <div
+        style={{
+          // padding: '0.5rem',
+          display: 'flex',
+          gap: '2rem',
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+        }}
+      >
+        {/* Left column: Room info and participants */}
+        <div className="col-1" style={{ width: '60%' }}>
+          {/* <h2>Poker Room: {roomId}</h2>
+          <h3>Participants:</h3>
+          <ul>
+            {participants.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul> */}
+          <div className="card">
+            <div className="nested-card" style={{ width: '100%' }}><b>Poker Room:</b> {roomId}</div>
+          </div>
+          <div className="card" style={{ marginTop: '1rem', maxHeight: '50vh', overflowY: 'auto' }}>
+            {participants.map((p) => (
+              <div key={p} className="nested-card ellipsis" style={{ width: '47%' }}>{p}</div>
+            ))}
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
+          </div>
+        </div>
+
+        {/* Right column: Placeholder for future content */}
+        <div className="col-2" style={{ width: '35%', background: '#f9f9f9' }}>
+          {/* Add your poker table, chat, or other features here */}
+          <div className="card">
+            <div style={{ color: '#aaa', textAlign: 'center' }}>
+              <em>Table/board or other content goes here.</em>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* voting cards */}
+      <div className="card" style={{ marginTop: '1.5rem' }}>
+        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">0</div></button>
+        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">1</div></button>
+        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">2</div></button>
+        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">3</div></button>
+        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">5</div></button>
+        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">8</div></button>
+        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">13</div></button>
+        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">21</div></button>
+      </div>
+    </>
   );
 }

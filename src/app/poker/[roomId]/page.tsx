@@ -2,18 +2,15 @@
 
 'use client';
 
-import { useParams } from 'next/navigation';
+// import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-type Props = {
-  params: {
+export default function RoomPage() {
+  const [roomData, setRoomData] = useState<{
     roomId: string;
-  };
-};
-
-export default function RoomPage({ params }: Props) {
-    const { roomId } = useParams();
-  const [roomData, setRoomData] = useState<{ roomId: string; roomName: string; userName: string } | null>(null);
+    roomName: string;
+    userName: string;
+  } | null>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('pokerRoomData');
@@ -21,12 +18,18 @@ export default function RoomPage({ params }: Props) {
       setRoomData(JSON.parse(stored));
     }
   }, []);
-  //
+
   if (!roomData) {
-    return <div style={{ padding: '2rem' }}>No room data found. Please create a room first.</div>;
+    return (
+      <div style={{ padding: '2rem' }}>
+        No room data found. Please create a room first.
+      </div>
+    );
   }
+
   //
-    console.log('RoomPage params:', params);
+  // console.log('RoomPage params:', params);
+
   // You can use params.roomId to fetch room-specific data or render content
 
   return (

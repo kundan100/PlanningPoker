@@ -2,7 +2,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 
 function hashString(input: string): string {
   let hash = 0;
@@ -28,7 +28,8 @@ function generateRandomId(existingIds: Set<string>) {
 
 const usedIds = new Set<string>();
 
-export default function PokerHome() {
+
+function PokerHomeInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [roomName, setRoomName] = useState('');
@@ -46,7 +47,6 @@ export default function PokerHome() {
       setRoomName(parsed.roomName || '');
       setIsJoinMode(false);
     } else if (urlRoomId) {
-      // Participant coming from shared link — prefill roomId and disable editing
       setRoomId(urlRoomId);
       setRoomName(urlRoomId);
       setIsJoinMode(true);
@@ -117,5 +117,13 @@ export default function PokerHome() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function PokerHome() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PokerHomeInner />
+    </Suspense>
   );
 }

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 const modules = [
   { name: 'Dashboard', path: '/' },
   { name: 'Poker', path: '/poker' },
+  { name: 'Learn', path: '/learn' },
   // Add more modules here later
 ];
 

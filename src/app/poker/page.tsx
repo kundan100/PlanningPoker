@@ -77,7 +77,7 @@ function PokerHomeInner() {
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4rem' }}>
-      <div style={{ width: '100%', maxWidth: '500px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '2rem', border: '1px solid #eee' }}>
+      <div style={{ width: '100%', maxWidth: '500px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '0.5rem', border: '1px solid #eee' }}>
         <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>{isJoinMode ? 'Join Poker Room' : 'Create Poker Room'}</h2>
 
         <div style={{ marginBottom: '1rem' }}>

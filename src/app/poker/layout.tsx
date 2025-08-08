@@ -18,7 +18,7 @@ const StyledLink = styled(Link)`
 `;
 
 const StyledMain = styled.main`
-  padding: 1rem;
+  padding: 0.5rem;
 `;
 
 /*

@@ -32,41 +32,41 @@ const usedIds = new Set<string>();
 
 export default function PokerHome() {
   const router = useRouter();
-  const [boardName, setBoardName] = useState('');
+  const [roomName, setRoomName] = useState('');
   const [userName, setUserName] = useState('');
-  const [boardId, setBoardId] = useState('');
+  const [roomId, setRoomId] = useState('');
 
   useEffect(() => {
-    // read pokerBoardData from sessionStorage
-    const storedPokerBoardData = sessionStorage.getItem('pokerBoardData');
+    // read pokerRoomData from sessionStorage
+    const storedPokerRoomData = sessionStorage.getItem('pokerRoomData');
     //
-    if (storedPokerBoardData) {
-        const parsedPokerBoardData = JSON.parse(storedPokerBoardData);
-        setBoardId(parsedPokerBoardData.boardId);
+    if (storedPokerRoomData) {
+        const parsedPokerRoomData = JSON.parse(storedPokerRoomData);
+        setRoomId(parsedPokerRoomData.roomId);
     } else {
         const id = generateRandomId(usedIds);
         usedIds.add(id);
-        setBoardId(id);
+        setRoomId(id);
     }
   }, []);
 
   const handleCreate = () => {
-    // without entering user-name, it will not redirect to the board.
-    // And, if boardName is not entered, consider boardId as boardName. 
+    // without entering user-name, it will not redirect to the room.
+    // And, if roomName is not entered, consider roomId as roomName. 
     if (!userName) {
       alert('Please fill in the field (Your Name)');
       return;
     }else {
-      if (!boardName) setBoardName(boardId);
+      if (!roomName) setRoomName(roomId);
     }
     // Store in sessionStorage
-    sessionStorage.setItem('pokerBoardData', JSON.stringify({
-        boardId,
-        boardName: boardName || boardId,
+    sessionStorage.setItem('pokerRoomData', JSON.stringify({
+        roomId,
+        roomName: roomName || roomId,
         userName,
     }));
-    // Redirect to the board page with the generated boardId.
-    router.push(`/poker/${boardId}`);
+    // Redirect to the room page with the generated roomId.
+    router.push(`/poker/${roomId}`);
   };
 
   return (
@@ -82,17 +82,17 @@ export default function PokerHome() {
           border: '1px solid #eee',
         }}
       >
-        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Poker Board</h2>
+        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Poker Room</h2>
 
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem' }}>
-            Board Name: <span style={{backgroundColor: '#f9f9f9', color: '#999', fontSize: '0.875rem'}}>{boardId}</span>
+            Room Name: <span style={{backgroundColor: '#f9f9f9', color: '#999', fontSize: '0.875rem'}}>{roomId}</span>
           </label>
           <input
             type="text"
-            value={boardName}
-            onChange={(e) => setBoardName(e.target.value)}
-            placeholder="[Optional] Enter custom board-name"
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value)}
+            placeholder="[Optional] Enter custom room-name"
             style={{
               width: '100%',
               padding: '0.75rem',
@@ -132,7 +132,7 @@ export default function PokerHome() {
             transition: 'background-color 0.2s ease-in-out',
           }}
         >
-          Create Board
+          Create Room
         </button>
       </div>
     </div>

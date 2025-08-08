@@ -2,7 +2,8 @@ export default function AppFooter() {
   return (
     <footer
       style={{
-        background: '#eee',
+        background: '#111',
+        color: '#fff',
         padding: '0.5rem',
         borderTop: '1px solid #ccc',
         textAlign: 'center',

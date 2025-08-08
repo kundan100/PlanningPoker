@@ -16,6 +16,7 @@ export default function PokerRoom() {
   const [userName, setUserName] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [votingEnabled, setVotingEnabled] = useState(false);
+  const [revealEnabled, setRevealEnabled] = useState(false);
   const ablyRef = useRef<any | null>(null);
   const channelRef = useRef<any | null>(null);
 
@@ -64,8 +65,11 @@ export default function PokerRoom() {
         });
 
         // Listen for voting state events
+
         channel.subscribe('voting-state', (msg: any) => {
           setVotingEnabled(!!(msg.data && msg.data.enabled));
+          // RevealVotes should be enabled when voting is enabled (i.e., after NewRound), and disabled after reveal
+          setRevealEnabled(!!(msg.data && msg.data.enabled));
         });
 
         // Fetch latest voting state from channel history for late joiners
@@ -74,6 +78,7 @@ export default function PokerRoom() {
           const votingStateMsg = history.items.find((item: any) => item.name === 'voting-state');
           if (votingStateMsg && votingStateMsg.data) {
             setVotingEnabled(!!votingStateMsg.data.enabled);
+            setRevealEnabled(!!votingStateMsg.data.enabled);
           }
         } catch (err) {
           console.warn('Error fetching voting state history', err);
@@ -117,9 +122,16 @@ export default function PokerRoom() {
   // Handler for host to start a new round
   const handleNewRound = () => {
     if (channelRef.current) {
-      channelRef.current.publish('voting-state', { enabled: true });
+      channelRef.current.publish('voting-state', { enabled: true, reveal: false });
     }
-    // Do NOT setVotingEnabled here; rely on Ably event for all clients
+    // Do NOT setVotingEnabled or setRevealEnabled here; rely on Ably event for all clients
+  };
+
+  const handleRevealVotes = () => {
+    if (channelRef.current) {
+      channelRef.current.publish('voting-state', { enabled: false, reveal: true });
+    }
+    // Do NOT setVotingEnabled or setRevealEnabled here; rely on Ably event for all clients
   };
   // On mount, request the latest voting state (optional: host can re-publish state on join)
   // Optionally, you can fetch channel history here to sync late joiners
@@ -158,13 +170,22 @@ export default function PokerRoom() {
           {/* Add your poker table, chat, or other features here */}
           <div className="card">
             {isHost && (
-              <button
-                style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
-                onClick={handleNewRound}
-                disabled={votingEnabled}
-              >
-                <div className="nested-card ellipsis">New Round</div>
-              </button>
+              <>
+                <button
+                  style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
+                  onClick={handleNewRound}
+                  disabled={votingEnabled}
+                >
+                  <div className="nested-card ellipsis">New Round</div>
+                </button>
+                <button
+                  style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
+                  onClick={handleRevealVotes}
+                  disabled={!votingEnabled || !revealEnabled}
+                >
+                  <div className="nested-card ellipsis">Reveal Votes</div>
+                </button>
+              </>
             )}
           </div>
         </div>

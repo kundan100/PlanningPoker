@@ -60,7 +60,7 @@ export default function RootLayout({
           {/* App-Menu */}
           <AppMenu />
           {/* Main Content */}
-          <main style={{ flex: 1, padding: '1rem' }}>{children}</main>
+          <main style={{ flex: 1, padding: '0.5rem' }}>{children}</main>
         </div>
 
         {/* Footer */}

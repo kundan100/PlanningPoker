@@ -1,3 +1,21 @@
+/* Poker votes table styles */
+.votes-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.votes-list-item {
+  margin: 0.5rem 0;
+}
+.votes-list-name {
+  width: 60px;
+  display: inline-block;
+}
+.votes-list-vote {
+  width: 40px;
+  display: inline-block;
+  margin-left: 1rem;
+}
 .col-1, .col-2 {
     display: flex;
     flex-direction: column;

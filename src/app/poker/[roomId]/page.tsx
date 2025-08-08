@@ -10,6 +10,13 @@ import Ably from 'ably';
 import '../../shared/styles/shared.css';
 
 export default function PokerRoom() {
+  // Helper to render a participant's vote cleanly
+  function renderVote(name: string) {
+    if (votes && Object.prototype.hasOwnProperty.call(votes, name) && votes[name] !== null) {
+      return votes[name];
+    }
+    return <i>No vote</i>;
+  }
   const { roomId } = useParams();
   const router = useRouter();
   const [participants, setParticipants] = useState<string[]>([]);
@@ -17,6 +24,9 @@ export default function PokerRoom() {
   const [isHost, setIsHost] = useState(false);
   const [votingEnabled, setVotingEnabled] = useState(false);
   const [revealEnabled, setRevealEnabled] = useState(false);
+  // Store only this user's vote locally until reveal
+  const [votes, setVotes] = useState<{ [name: string]: number | null }>({});
+  const [myVote, setMyVote] = useState<number | null>(null);
   const ablyRef = useRef<any | null>(null);
   const channelRef = useRef<any | null>(null);
 
@@ -56,7 +66,11 @@ export default function PokerRoom() {
         // subscribe to presence enter/leave to keep participant list in sync
         channel.presence.subscribe('enter', (member: any) => {
           const name = (member.data && member.data.name) || member.clientId || member.id;
-          setParticipants((prev) => (prev.includes(name) ? prev : [...prev, name]));
+          setParticipants((prev) => {
+            // Remove all duplicates, keep order of first appearance
+            const next = [...prev, name];
+            return Array.from(new Set(next));
+          });
         });
 
         channel.presence.subscribe('leave', (member: any) => {
@@ -64,21 +78,53 @@ export default function PokerRoom() {
           setParticipants((prev) => prev.filter((p) => p !== name));
         });
 
-        // Listen for voting state events
-
+        // Listen for voting state events and votes
+        let revealActive = false;
         channel.subscribe('voting-state', (msg: any) => {
           setVotingEnabled(!!(msg.data && msg.data.enabled));
-          // RevealVotes should be enabled when voting is enabled (i.e., after NewRound), and disabled after reveal
-          setRevealEnabled(!!(msg.data && msg.data.enabled));
+          setRevealEnabled(!!(msg.data && (msg.data.enabled || msg.data.reveal)));
+          if (msg.data && msg.data.enabled) {
+            setVotes({}); // Clear votes on new round
+            revealActive = false;
+          }
+          if (msg.data && msg.data.reveal) {
+            revealActive = true;
+            // On reveal, show your own vote immediately in the UI and send it
+            if (myVote !== null) {
+              setVotes((prev) => ({ ...prev, [userName]: myVote }));
+              setTimeout(() => {
+                channelRef.current && channelRef.current.publish('vote', { name: userName, vote: myVote });
+              }, 200);
+            }
+          }
+        });
+        channel.subscribe('vote', (msg: any) => {
+          if (!revealActive) return;
+          if (msg.data && msg.data.name) {
+            setVotes((prev) => {
+              return { ...prev, [msg.data.name]: msg.data.vote };
+            });
+          }
         });
 
         // Fetch latest voting state from channel history for late joiners
         try {
-          const history = await channel.history({ limit: 10 });
+          const history = await channel.history({ limit: 50 });
           const votingStateMsg = history.items.find((item: any) => item.name === 'voting-state');
           if (votingStateMsg && votingStateMsg.data) {
             setVotingEnabled(!!votingStateMsg.data.enabled);
             setRevealEnabled(!!votingStateMsg.data.enabled);
+          }
+          // Only restore votes if reveal is active
+          if (votingStateMsg && votingStateMsg.data && votingStateMsg.data.reveal) {
+            const voteMsgs = history.items.filter((item: any) => item.name === 'vote');
+            const votesObj: { [name: string]: number | null } = {};
+            voteMsgs.forEach((item: any) => {
+              if (item.data && item.data.name) {
+                votesObj[item.data.name] = item.data.vote;
+              }
+            });
+            setVotes(votesObj);
           }
         } catch (err) {
           console.warn('Error fetching voting state history', err);
@@ -88,7 +134,8 @@ export default function PokerRoom() {
         try {
           const members = await channel.presence.get();
           if (mounted) {
-            const names = members.map((m: any) => (m.data && m.data.name) || m.clientId || m.id);
+            // Remove duplicates from Ably presence list
+            const names = Array.from(new Set(members.map((m: any) => (m.data && m.data.name) || m.clientId || m.id)));
             setParticipants(names);
           }
         } catch (err) {
@@ -106,13 +153,18 @@ export default function PokerRoom() {
 
     return () => {
       mounted = false;
+      // Defensive: Only leave presence and close Ably if connection is active and not already closed/closing
       try {
-        if (channelRef.current) channelRef.current.presence.leave();
+        if (channelRef.current && channelRef.current.connection && channelRef.current.connection.state === 'connected') {
+          channelRef.current.presence.leave();
+        }
       } catch (e) {
         // ignore
       }
       try {
-        if (ablyRef.current) ablyRef.current.close();
+        if (ablyRef.current && ablyRef.current.connection && ablyRef.current.connection.state === 'connected') {
+          ablyRef.current.close();
+        }
       } catch (e) {
         // ignore
       }
@@ -124,14 +176,22 @@ export default function PokerRoom() {
     if (channelRef.current) {
       channelRef.current.publish('voting-state', { enabled: true, reveal: false });
     }
+    setMyVote(null);
     // Do NOT setVotingEnabled or setRevealEnabled here; rely on Ably event for all clients
   };
 
   const handleRevealVotes = () => {
     if (channelRef.current) {
       channelRef.current.publish('voting-state', { enabled: false, reveal: true });
+      // Do not send vote here, will be sent in voting-state event handler
     }
     // Do NOT setVotingEnabled or setRevealEnabled here; rely on Ably event for all clients
+  };
+
+  // Handler for voting
+  const handleVote = (vote: number) => {
+    if (!votingEnabled || !userName) return;
+    setMyVote(vote);
   };
   // On mount, request the latest voting state (optional: host can re-publish state on join)
   // Optionally, you can fetch channel history here to sync late joiners
@@ -198,12 +258,30 @@ export default function PokerRoom() {
             key={val}
             style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
             className="vote-btn"
-            disabled={!votingEnabled}
+            disabled={!votingEnabled || myVote !== null}
+            onClick={() => handleVote(val)}
           >
             <div className="nested-card ellipsis">{val}</div>
           </button>
         ))}
       </div>
+
+      {/* Reveal votes table */}
+      {revealEnabled && (
+        <div className="card" style={{ marginTop: '1.5rem' }}>
+          <b>Votes:</b>
+          <ul className="votes-list">
+            {participants.map((p) => (
+              <li key={p} className="votes-list-item">
+                <span className="nested-card ellipsis votes-list-name">{p}:</span>
+                <span className="nested-card ellipsis votes-list-vote">
+                  {renderVote(p)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </>
   );
 }

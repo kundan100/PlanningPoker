@@ -68,6 +68,17 @@ export default function PokerRoom() {
           setVotingEnabled(!!(msg.data && msg.data.enabled));
         });
 
+        // Fetch latest voting state from channel history for late joiners
+        try {
+          const history = await channel.history({ limit: 10 });
+          const votingStateMsg = history.items.find((item: any) => item.name === 'voting-state');
+          if (votingStateMsg && votingStateMsg.data) {
+            setVotingEnabled(!!votingStateMsg.data.enabled);
+          }
+        } catch (err) {
+          console.warn('Error fetching voting state history', err);
+        }
+
         // fetch current presence members and populate the list
         try {
           const members = await channel.presence.get();

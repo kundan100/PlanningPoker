@@ -1,8 +1,15 @@
-.vote-btn-selected {
-  border: 2px solid #0070f3 !important;
-  background: #e6f0fa !important;
-  color: #0070f3 !important;
+/* button : styles */
+button:not([disabled]):hover {
+    cursor: pointer;
+    border: 2px solid #029789 !important;
+    background: #ddf9f7 !important;
 }
+.vote-btn-selected {
+  border: 2px solid #029789 !important;
+  background: #5bebdd !important;
+  color: #00b9a7 !important;
+}
+
 /* Poker votes table styles */
 .votes-list {
   margin: 0;

@@ -45,6 +45,7 @@ function PokerHomeInner() {
       const parsed = JSON.parse(storedPokerRoomData);
       setRoomId(parsed.roomId);
       setRoomName(parsed.roomName || '');
+      setUserName(parsed.userName || '');
       setIsJoinMode(false);
     } else if (urlRoomId) {
       setRoomId(urlRoomId);

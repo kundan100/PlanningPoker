@@ -45,6 +45,7 @@ function PokerHomeInner() {
       const parsed = JSON.parse(storedPokerRoomData);
       setRoomId(parsed.roomId);
       setRoomName(parsed.roomName || '');
+      setUserName(parsed.userName || '');
       setIsJoinMode(false);
     } else if (urlRoomId) {
       setRoomId(urlRoomId);
@@ -66,11 +67,15 @@ function PokerHomeInner() {
 
     const finalRoomName = roomName || roomId;
 
-    sessionStorage.setItem('pokerRoomData', JSON.stringify({
-      roomId,
-      roomName: finalRoomName,
-      userName,
-    }));
+    sessionStorage.setItem(
+      'pokerRoomData',
+      JSON.stringify({
+        roomId,
+        roomName: finalRoomName,
+        userName,
+        isHost: !isJoinMode, // true if creating, false if joining
+      })
+    );
 
     router.push(`/poker/${roomId}`);
   };

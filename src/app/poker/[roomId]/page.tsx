@@ -7,15 +7,86 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Ably from 'ably';
-import '../../shared/styles/shared.css'
+import '../../shared/styles/shared.css';
 
 export default function PokerRoom() {
+
+  const _helpers = {
+    getSpinnerForVotingValue: () => {
+      return (<span className="loader" style={{ display: 'inline-block', width: 16, height: 16, verticalAlign: 'middle' }}>
+      <svg viewBox="0 0 50 50" style={{ width: 16, height: 16 }}>
+        <circle
+          cx="25"
+          cy="25"
+          r="20"
+          fill="none"
+          stroke="#ff0000"
+          strokeWidth="5"
+          strokeDasharray="31.4 31.4"
+          strokeLinecap="round"
+        >
+          <animateTransform
+            attributeName="transform"
+            type="rotate"
+            from="0 25 25"
+            to="360 25 25"
+            dur="1s"
+            repeatCount="indefinite"
+          />
+        </circle>
+      </svg>
+    </span>)
+    }
+  };
+  // Helper to render a participant's vote cleanly
+  function renderVote(name: string) {
+    if (votes && Object.prototype.hasOwnProperty.call(votes, name) && votes[name] !== null) {
+      return votes[name];
+    }
+    return _helpers.getSpinnerForVotingValue();
+  }
   const { roomId } = useParams();
   const router = useRouter();
   const [participants, setParticipants] = useState<string[]>([]);
   const [userName, setUserName] = useState('');
+  const [isHost, setIsHost] = useState(false);
+  const [votingEnabled, setVotingEnabled] = useState(false);
+  const [revealEnabled, setRevealEnabled] = useState(false);
+  // Store only this user's vote locally until reveal
+  const [votes, setVotes] = useState<{ [name: string]: number | null }>({});
+  const [myVote, setMyVote] = useState<number | null>(null);
   const ablyRef = useRef<any | null>(null);
   const channelRef = useRef<any | null>(null);
+  // --- Fix for stale closure: always use latest value in Ably event handlers ---
+  const myVoteRef = useRef<number | null>(null);
+  const userNameRef = useRef<string>('');
+  useEffect(() => { myVoteRef.current = myVote; }, [myVote]);
+  useEffect(() => { userNameRef.current = userName; }, [userName]);
+
+  useEffect(() => {
+    console.log("cyk--10-1 > participants", participants);
+  }, [participants]);
+  useEffect(() => {
+    console.log("cyk--10-1 > userName", userName);
+  }, [userName]);
+  useEffect(() => {
+    console.log("cyk--10-1 > votingEnabled", votingEnabled);
+  }, [votingEnabled]);
+  useEffect(() => {
+    console.log("cyk--10-1 > revealEnabled", revealEnabled);
+  }, [revealEnabled]);
+  useEffect(() => {
+    console.log("cyk--10-1 > votes", votes);
+  }, [votes]);
+  useEffect(() => {
+    console.log("cyk--10-1 > myVote", myVote);
+  }, [myVote]);
+  useEffect(() => {
+    console.log("cyk--10-1 > ablyRef", ablyRef);
+  }, [ablyRef]);
+  useEffect(() => {
+    console.log("cyk--10-1 > channelRef", channelRef);
+  }, [channelRef]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('pokerRoomData');
@@ -26,7 +97,10 @@ export default function PokerRoom() {
     }
 
     const parsed = JSON.parse(stored);
+
     setUserName(parsed.userName);
+    // Host is the user who created the room (room creator)
+    setIsHost(parsed.isHost === true || parsed.isHost === 'true');
 
     // ensure we have a stable clientId for Ably presence
     let clientId = parsed.ablyClientId;
@@ -46,10 +120,15 @@ export default function PokerRoom() {
         const channel = ably.channels.get(`poker-room-${roomId}`);
         channelRef.current = channel;
 
+
         // subscribe to presence enter/leave to keep participant list in sync
         channel.presence.subscribe('enter', (member: any) => {
           const name = (member.data && member.data.name) || member.clientId || member.id;
-          setParticipants((prev) => (prev.includes(name) ? prev : [...prev, name]));
+          setParticipants((prev) => {
+            // Remove all duplicates, keep order of first appearance
+            const next = [...prev, name];
+            return Array.from(new Set(next));
+          });
         });
 
         channel.presence.subscribe('leave', (member: any) => {
@@ -57,11 +136,78 @@ export default function PokerRoom() {
           setParticipants((prev) => prev.filter((p) => p !== name));
         });
 
+        // Listen for voting state events and votes
+        let revealActive = false;
+        channel.subscribe('voting-state', (msg: any) => {
+          console.log('[Ably] voting-state event received', msg.data);
+          setVotingEnabled(!!(msg.data && msg.data.enabled));
+          setRevealEnabled(!!(msg.data && (msg.data.enabled || msg.data.reveal)));
+          if (msg.data && msg.data.enabled) {
+            setVotes({}); // Clear votes on new round
+            revealActive = false;
+            console.log('[Ably] New round started, votes cleared');
+          }
+          if (msg.data && msg.data.reveal) {
+            revealActive = true;
+            // --- Use refs to get latest values ---
+            const latestVote = myVoteRef.current;
+            const latestUser = userNameRef.current;
+            console.log('[Ably] Reveal triggered, sending my vote if present', { latestVote, latestUser });
+            if (latestVote !== null && latestUser) {
+              setVotes((prev) => ({ ...prev, [latestUser]: latestVote }));
+              setTimeout(() => {
+                if (channelRef.current) {
+                  channelRef.current.publish('vote', { name: latestUser, vote: latestVote });
+                  console.log('[Ably] Published my vote', { name: latestUser, vote: latestVote });
+                }
+              }, 200);
+            }
+          }
+        });
+        channel.subscribe('vote', (msg: any) => {
+          if (!revealActive) {
+            console.log('[Ably] Ignoring vote event, reveal not active');
+            return;
+          }
+          if (msg.data && msg.data.name) {
+            setVotes((prev) => {
+              console.log('[Ably] Received vote for', msg.data.name, 'vote:', msg.data.vote);
+              return { ...prev, [msg.data.name]: msg.data.vote };
+            });
+          }
+        });
+
+        // Fetch latest voting state from channel history for late joiners
+        try {
+          const history = await channel.history({ limit: 50 });
+          const votingStateMsg = history.items.find((item: any) => item.name === 'voting-state');
+          if (votingStateMsg && votingStateMsg.data) {
+            setVotingEnabled(!!votingStateMsg.data.enabled);
+            setRevealEnabled(!!votingStateMsg.data.enabled);
+            console.log('[Ably] Synced voting state from history', votingStateMsg.data);
+          }
+          // Only restore votes if reveal is active
+          if (votingStateMsg && votingStateMsg.data && votingStateMsg.data.reveal) {
+            const voteMsgs = history.items.filter((item: any) => item.name === 'vote');
+            const votesObj: { [name: string]: number | null } = {};
+            voteMsgs.forEach((item: any) => {
+              if (item.data && item.data.name) {
+                votesObj[item.data.name] = item.data.vote;
+              }
+            });
+            setVotes(votesObj);
+            console.log('[Ably] Synced votes from history', votesObj);
+          }
+        } catch (err) {
+          console.warn('Error fetching voting state history', err);
+        }
+
         // fetch current presence members and populate the list
         try {
           const members = await channel.presence.get();
           if (mounted) {
-            const names = members.map((m: any) => (m.data && m.data.name) || m.clientId || m.id);
+            // Remove duplicates from Ably presence list
+            const names = Array.from(new Set(members.map((m: any) => (m.data && m.data.name) || m.clientId || m.id)));
             setParticipants(names);
           }
         } catch (err) {
@@ -79,24 +225,55 @@ export default function PokerRoom() {
 
     return () => {
       mounted = false;
+      // Defensive: Only leave presence and close Ably if connection is active and not already closed/closing
       try {
-        if (channelRef.current) channelRef.current.presence.leave();
+        if (channelRef.current && channelRef.current.connection && channelRef.current.connection.state === 'connected') {
+          channelRef.current.presence.leave();
+        }
       } catch (e) {
         // ignore
       }
       try {
-        if (ablyRef.current) ablyRef.current.close();
+        if (ablyRef.current && ablyRef.current.connection && ablyRef.current.connection.state === 'connected') {
+          ablyRef.current.close();
+        }
       } catch (e) {
         // ignore
       }
     };
   }, [roomId, router]);
 
+  // Handler for host to start a new round
+  const handleNewRound = () => {
+    if (channelRef.current) {
+      channelRef.current.publish('voting-state', { enabled: true, reveal: false });
+    }
+    setMyVote(null);
+    // Do NOT setVotingEnabled or setRevealEnabled here; rely on Ably event for all clients
+  };
+
+  const handleRevealVotes = () => {
+    console.log("cyk--10-1 > handleVote", {myVote, votes, votingEnabled, userName, channelRef});
+    if (channelRef.current) {
+      channelRef.current.publish('voting-state', { enabled: false, reveal: true });
+      // Do not send vote here, will be sent in voting-state event handler
+    }
+    // Do NOT setVotingEnabled or setRevealEnabled here; rely on Ably event for all clients
+  };
+
+  // Handler for voting
+  const handleVote = (vote: number) => {
+    console.log("cyk--10-1 > handleVote", {vote, myVote, votes, votingEnabled, userName});
+    if (!votingEnabled || !userName) return;
+    setMyVote(vote);
+  };
+  // On mount, request the latest voting state (optional: host can re-publish state on join)
+  // Optionally, you can fetch channel history here to sync late joiners
+
   return (
     <>
       <div
         style={{
-          // padding: '0.5rem',
           display: 'flex',
           gap: '2rem',
           flexWrap: 'wrap',
@@ -117,21 +294,17 @@ export default function PokerRoom() {
           </div>
           <div className="card" style={{ marginTop: '1rem', maxHeight: '50vh', overflowY: 'auto' }}>
             {participants.map((p) => (
-              <div key={p} className="nested-card ellipsis" style={{ width: '47%' }}>{p}</div>
+                <div key={p} className="nested-card ellipsis" style={{ width: '47%', display: 'flex' }}>
+                <span className="participants-name ellipsis" title={p}>
+                  {/* Participant's name */}
+                  {p}
+                </span>
+                <span className="participants-vote-value ellipsis">
+                  {/* participant's voting-value or spinner till vote is not revealed */}
+                  {revealEnabled && renderVote(p)}
+                </span>
+                </div>
             ))}
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
-            <div className="nested-card ellipsis" style={{ width: '47%' }}>Col-1 Child-1: Main Overview Card - Inner Content</div>
           </div>
         </div>
 
@@ -139,24 +312,59 @@ export default function PokerRoom() {
         <div className="col-2" style={{ width: '35%', background: '#f9f9f9' }}>
           {/* Add your poker table, chat, or other features here */}
           <div className="card">
-            <div style={{ color: '#aaa', textAlign: 'center' }}>
-              <em>Table/board or other content goes here.</em>
-            </div>
+            {isHost && (
+              <>
+                <button
+                  style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
+                  onClick={handleNewRound}
+                  disabled={votingEnabled}
+                >
+                  <div className="nested-card ellipsis">New Round</div>
+                </button>
+                <button
+                  style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
+                  onClick={handleRevealVotes}
+                  disabled={!votingEnabled || !revealEnabled}
+                >
+                  <div className="nested-card ellipsis">Reveal Votes</div>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       {/* voting cards */}
       <div className="card" style={{ marginTop: '1.5rem' }}>
-        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">0</div></button>
-        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">1</div></button>
-        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">2</div></button>
-        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">3</div></button>
-        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">5</div></button>
-        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">8</div></button>
-        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">13</div></button>
-        <button style={{marginRight: '0.5rem', paddingLeft: '0.5rem'}}><div className="nested-card ellipsis">21</div></button>
+        {[0, 1, 2, 3, 5, 8, 13, 21].map((val) => (
+          <button
+            key={val}
+            style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
+            className="vote-btn"
+            disabled={!votingEnabled || myVote !== null}
+            onClick={() => handleVote(val)}
+          >
+            <div className="nested-card ellipsis">{val}</div>
+          </button>
+        ))}
       </div>
+
+      {/* Reveal votes table */}
+      {/* {revealEnabled && (
+        <div className="card" style={{ marginTop: '1.5rem' }}>
+          <b>Votes:</b>
+          <ul className="votes-list">
+            {participants.map((p) => (
+              <li key={p} className="votes-list-item">
+                <span className="nested-card ellipsis votes-list-name">{p}:</span>
+                <span className="nested-card ellipsis votes-list-vote">
+                  {renderVote(p)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )} */}
     </>
   );
 }

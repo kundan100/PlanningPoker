@@ -1,3 +1,21 @@
+/* Poker votes table styles */
+.votes-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.votes-list-item {
+  margin: 0.5rem 0;
+}
+.votes-list-name {
+  width: 60px;
+  display: inline-block;
+}
+.votes-list-vote {
+  width: 40px;
+  display: inline-block;
+  margin-left: 1rem;
+}
 .col-1, .col-2 {
     display: flex;
     flex-direction: column;
@@ -24,7 +42,7 @@
     display: inline-block;
     background: #f9f9f9;
     border-radius: 10px;
-    padding: 0.75rem;
+    padding: 0.5rem;
     box-shadow: inset 0 2px 6px rgba(0,0,0,0.08);
     border: 1px solid #ccc;
     /**/
@@ -35,4 +53,20 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+.participants-name {
+    display: inline-block;
+    max-width: 85%;
+    vertical-align: middle;
+    /* background-color: yellow; */
+}
+.participants-vote-value {    
+    width: auto;
+    max-width: 15%;
+    background-color: #eee;
+    text-align: right;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: auto;
+
 }

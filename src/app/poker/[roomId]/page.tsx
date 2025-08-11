@@ -10,12 +10,40 @@ import Ably from 'ably';
 import '../../shared/styles/shared.css';
 
 export default function PokerRoom() {
+
+  const _helpers = {
+    getSpinnerForVotingValue: () => {
+      return (<span className="loader" style={{ display: 'inline-block', width: 16, height: 16, verticalAlign: 'middle' }}>
+      <svg viewBox="0 0 50 50" style={{ width: 16, height: 16 }}>
+        <circle
+          cx="25"
+          cy="25"
+          r="20"
+          fill="none"
+          stroke="#ff0000"
+          strokeWidth="5"
+          strokeDasharray="31.4 31.4"
+          strokeLinecap="round"
+        >
+          <animateTransform
+            attributeName="transform"
+            type="rotate"
+            from="0 25 25"
+            to="360 25 25"
+            dur="1s"
+            repeatCount="indefinite"
+          />
+        </circle>
+      </svg>
+    </span>)
+    }
+  };
   // Helper to render a participant's vote cleanly
   function renderVote(name: string) {
     if (votes && Object.prototype.hasOwnProperty.call(votes, name) && votes[name] !== null) {
       return votes[name];
     }
-    return <i>No vote</i>;
+    return _helpers.getSpinnerForVotingValue();
   }
   const { roomId } = useParams();
   const router = useRouter();
@@ -266,7 +294,16 @@ export default function PokerRoom() {
           </div>
           <div className="card" style={{ marginTop: '1rem', maxHeight: '50vh', overflowY: 'auto' }}>
             {participants.map((p) => (
-              <div key={p} className="nested-card ellipsis" style={{ width: '47%' }}>{p}</div>
+                <div key={p} className="nested-card ellipsis" style={{ width: '47%', display: 'flex' }}>
+                <span className="participants-name ellipsis" title={p}>
+                  {/* Participant's name */}
+                  {p}
+                </span>
+                <span className="participants-vote-value ellipsis">
+                  {/* participant's voting-value or spinner till vote is not revealed */}
+                  {revealEnabled && renderVote(p)}
+                </span>
+                </div>
             ))}
           </div>
         </div>
@@ -313,7 +350,7 @@ export default function PokerRoom() {
       </div>
 
       {/* Reveal votes table */}
-      {revealEnabled && (
+      {/* {revealEnabled && (
         <div className="card" style={{ marginTop: '1.5rem' }}>
           <b>Votes:</b>
           <ul className="votes-list">
@@ -327,7 +364,7 @@ export default function PokerRoom() {
             ))}
           </ul>
         </div>
-      )}
+      )} */}
     </>
   );
 }

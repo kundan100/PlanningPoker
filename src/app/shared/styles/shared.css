@@ -54,3 +54,19 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.participants-name {
+    display: inline-block;
+    max-width: 85%;
+    vertical-align: middle;
+    /* background-color: yellow; */
+}
+.participants-vote-value {    
+    width: auto;
+    max-width: 15%;
+    background-color: #eee;
+    text-align: right;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: auto;
+
+}

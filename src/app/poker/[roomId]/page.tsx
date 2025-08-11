@@ -12,15 +12,16 @@ import '../../shared/styles/shared.css';
 export default function PokerRoom() {
 
   const _helpers = {
-    getSpinnerForVotingValue: () => {
-      return (<span className="loader" style={{ display: 'inline-block', width: 16, height: 16, verticalAlign: 'middle' }}>
+    getSpinnerForVotingValue: (p ="") => {
+      console.log("cyk--10-1 > getSpinnerForVotingValue > votesStatus[p]", votesStatus[p])
+      return (<span className="loader" style={{ display: votingEnabled ? 'inline-block' : 'none', width: 16, height: 16, verticalAlign: 'middle' }}>
       <svg viewBox="0 0 50 50" style={{ width: 16, height: 16 }}>
         <circle
           cx="25"
           cy="25"
           r="20"
           fill="none"
-          stroke="#ff0000"
+          stroke={votesStatus[p] ? "#00ff00" : "#ff0000"}
           strokeWidth="5"
           strokeDasharray="31.4 31.4"
           strokeLinecap="round"
@@ -43,7 +44,7 @@ export default function PokerRoom() {
     if (votes && Object.prototype.hasOwnProperty.call(votes, name) && votes[name] !== null) {
       return votes[name];
     }
-    return _helpers.getSpinnerForVotingValue();
+    // return _helpers.getSpinnerForVotingValue(false);
   }
   const { roomId } = useParams();
   const router = useRouter();
@@ -54,6 +55,7 @@ export default function PokerRoom() {
   const [revealEnabled, setRevealEnabled] = useState(false);
   // Store only this user's vote locally until reveal
   const [votes, setVotes] = useState<{ [name: string]: number | null }>({});
+  const [votesStatus, setVotesStatus] = useState<{ [name: string]: boolean | null }>({});
   const [myVote, setMyVote] = useState<number | null>(null);
   // For instant UI feedback on vote selection (UI only)
   const [selectedVote, setSelectedVote] = useState<number | null>(null); // to show the highlight for slected vote-val button
@@ -80,6 +82,9 @@ export default function PokerRoom() {
   useEffect(() => {
     console.log("cyk--10-1 > votes", votes);
   }, [votes]);
+  useEffect(() => {
+    console.log("cyk--10-1 > votesStatus", votesStatus);
+  }, [votesStatus]);
   useEffect(() => {
     console.log("cyk--10-1 > myVote", myVote);
   }, [myVote]);
@@ -166,6 +171,10 @@ export default function PokerRoom() {
               }, 200);
             }
           }
+        });
+        channel.subscribe('vote-attempted', (msg: any) => {
+          console.log('[Ably] vote-attempted subscribed', msg.data);
+          setVotesStatus((prev) => ({ ...prev, ...msg.data}));
         });
         channel.subscribe('vote', (msg: any) => {
           if (!revealActive) {
@@ -257,7 +266,7 @@ export default function PokerRoom() {
   };
 
   const handleRevealVotes = () => {
-    console.log("cyk--10-1 > handleVote", {myVote, votes, votingEnabled, userName, channelRef});
+    console.log("cyk--10-1 > handleRevealVotes", {myVote, votes, votingEnabled, userName, channelRef});
     if (channelRef.current) {
       channelRef.current.publish('voting-state', { enabled: false, reveal: true });
       // Do not send vote here, will be sent in voting-state event handler
@@ -268,6 +277,11 @@ export default function PokerRoom() {
   // Handler for voting
   const handleVote = (vote: number) => {
     setSelectedVote(vote); // UI highlight only
+    // setVotesStatus((prev) => ({ ...prev, [userName]: true })); // mark as voted
+    // if (channelRef.current) {
+      console.log("cyk--10-1 > handleVote > vote-attempted published");
+      channelRef.current.publish('vote-attempted', { [userName]: true });
+    // }
     console.log("cyk--10-1 > handleVote", {vote, myVote, votes, votingEnabled, userName});
     if (!votingEnabled || !userName) return;
     setMyVote(vote);
@@ -306,6 +320,7 @@ export default function PokerRoom() {
                 </span>
                 <span className="participants-vote-value ellipsis">
                   {/* participant's voting-value or spinner till vote is not revealed */}
+                  {_helpers.getSpinnerForVotingValue(p)}
                   {revealEnabled && renderVote(p)}
                 </span>
                 </div>
@@ -320,6 +335,7 @@ export default function PokerRoom() {
             {isHost && (
               <>
                 <button
+                  className='btn-a'
                   style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
                   onClick={handleNewRound}
                   disabled={votingEnabled}
@@ -327,6 +343,7 @@ export default function PokerRoom() {
                   <div className="nested-card ellipsis">New Round</div>
                 </button>
                 <button
+                  className='btn-a'
                   style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
                   onClick={handleRevealVotes}
                   disabled={!votingEnabled || !revealEnabled}
@@ -345,7 +362,7 @@ export default function PokerRoom() {
           <button
             key={val}
             style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
-            className={`vote-btn${selectedVote === val ? ' vote-btn-selected' : 'dummy-class'}`}
+            className={`btn-a vote-btn${selectedVote === val ? ' vote-btn-selected' : 'dummy-class'}`}
             // disabled={!votingEnabled || myVote !== null} // this is for one time selection of vote-val
             disabled={!votingEnabled}
             onClick={() => handleVote(val)}

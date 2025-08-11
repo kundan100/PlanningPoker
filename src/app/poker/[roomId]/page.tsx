@@ -29,6 +29,36 @@ export default function PokerRoom() {
   const [myVote, setMyVote] = useState<number | null>(null);
   const ablyRef = useRef<any | null>(null);
   const channelRef = useRef<any | null>(null);
+  // --- Fix for stale closure: always use latest value in Ably event handlers ---
+  const myVoteRef = useRef<number | null>(null);
+  const userNameRef = useRef<string>('');
+  useEffect(() => { myVoteRef.current = myVote; }, [myVote]);
+  useEffect(() => { userNameRef.current = userName; }, [userName]);
+
+  useEffect(() => {
+    console.log("cyk--10-1 > participants", participants);
+  }, [participants]);
+  useEffect(() => {
+    console.log("cyk--10-1 > userName", userName);
+  }, [userName]);
+  useEffect(() => {
+    console.log("cyk--10-1 > votingEnabled", votingEnabled);
+  }, [votingEnabled]);
+  useEffect(() => {
+    console.log("cyk--10-1 > revealEnabled", revealEnabled);
+  }, [revealEnabled]);
+  useEffect(() => {
+    console.log("cyk--10-1 > votes", votes);
+  }, [votes]);
+  useEffect(() => {
+    console.log("cyk--10-1 > myVote", myVote);
+  }, [myVote]);
+  useEffect(() => {
+    console.log("cyk--10-1 > ablyRef", ablyRef);
+  }, [ablyRef]);
+  useEffect(() => {
+    console.log("cyk--10-1 > channelRef", channelRef);
+  }, [channelRef]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('pokerRoomData');
@@ -81,27 +111,39 @@ export default function PokerRoom() {
         // Listen for voting state events and votes
         let revealActive = false;
         channel.subscribe('voting-state', (msg: any) => {
+          console.log('[Ably] voting-state event received', msg.data);
           setVotingEnabled(!!(msg.data && msg.data.enabled));
           setRevealEnabled(!!(msg.data && (msg.data.enabled || msg.data.reveal)));
           if (msg.data && msg.data.enabled) {
             setVotes({}); // Clear votes on new round
             revealActive = false;
+            console.log('[Ably] New round started, votes cleared');
           }
           if (msg.data && msg.data.reveal) {
             revealActive = true;
-            // On reveal, show your own vote immediately in the UI and send it
-            if (myVote !== null) {
-              setVotes((prev) => ({ ...prev, [userName]: myVote }));
+            // --- Use refs to get latest values ---
+            const latestVote = myVoteRef.current;
+            const latestUser = userNameRef.current;
+            console.log('[Ably] Reveal triggered, sending my vote if present', { latestVote, latestUser });
+            if (latestVote !== null && latestUser) {
+              setVotes((prev) => ({ ...prev, [latestUser]: latestVote }));
               setTimeout(() => {
-                channelRef.current && channelRef.current.publish('vote', { name: userName, vote: myVote });
+                if (channelRef.current) {
+                  channelRef.current.publish('vote', { name: latestUser, vote: latestVote });
+                  console.log('[Ably] Published my vote', { name: latestUser, vote: latestVote });
+                }
               }, 200);
             }
           }
         });
         channel.subscribe('vote', (msg: any) => {
-          if (!revealActive) return;
+          if (!revealActive) {
+            console.log('[Ably] Ignoring vote event, reveal not active');
+            return;
+          }
           if (msg.data && msg.data.name) {
             setVotes((prev) => {
+              console.log('[Ably] Received vote for', msg.data.name, 'vote:', msg.data.vote);
               return { ...prev, [msg.data.name]: msg.data.vote };
             });
           }
@@ -114,6 +156,7 @@ export default function PokerRoom() {
           if (votingStateMsg && votingStateMsg.data) {
             setVotingEnabled(!!votingStateMsg.data.enabled);
             setRevealEnabled(!!votingStateMsg.data.enabled);
+            console.log('[Ably] Synced voting state from history', votingStateMsg.data);
           }
           // Only restore votes if reveal is active
           if (votingStateMsg && votingStateMsg.data && votingStateMsg.data.reveal) {
@@ -125,6 +168,7 @@ export default function PokerRoom() {
               }
             });
             setVotes(votesObj);
+            console.log('[Ably] Synced votes from history', votesObj);
           }
         } catch (err) {
           console.warn('Error fetching voting state history', err);
@@ -181,6 +225,7 @@ export default function PokerRoom() {
   };
 
   const handleRevealVotes = () => {
+    console.log("cyk--10-1 > handleVote", {myVote, votes, votingEnabled, userName, channelRef});
     if (channelRef.current) {
       channelRef.current.publish('voting-state', { enabled: false, reveal: true });
       // Do not send vote here, will be sent in voting-state event handler
@@ -190,6 +235,7 @@ export default function PokerRoom() {
 
   // Handler for voting
   const handleVote = (vote: number) => {
+    console.log("cyk--10-1 > handleVote", {vote, myVote, votes, votingEnabled, userName});
     if (!votingEnabled || !userName) return;
     setMyVote(vote);
   };

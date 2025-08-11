@@ -341,7 +341,8 @@ export default function PokerRoom() {
             key={val}
             style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
             className="vote-btn"
-            disabled={!votingEnabled || myVote !== null}
+            // disabled={!votingEnabled || myVote !== null} // this is for one time selection of vote-val
+            disabled={!votingEnabled}
             onClick={() => handleVote(val)}
           >
             <div className="nested-card ellipsis">{val}</div>

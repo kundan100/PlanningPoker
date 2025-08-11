@@ -67,15 +67,16 @@ function PokerHomeInner() {
 
     const finalRoomName = roomName || roomId;
 
-    sessionStorage.setItem(
-      'pokerRoomData',
-      JSON.stringify({
-        roomId,
-        roomName: finalRoomName,
-        userName,
-        isHost: !isJoinMode, // true if creating, false if joining
-      })
-    );
+    const sessionObj: any = {
+      roomId,
+      roomName: finalRoomName,
+      userName
+    };
+    // Only set isHost if creating (not joining)
+    if (!isJoinMode) {
+      sessionObj.isHost = true;
+    }
+    sessionStorage.setItem('pokerRoomData', JSON.stringify(sessionObj));
 
     router.push(`/poker/${roomId}`);
   };
@@ -83,7 +84,7 @@ function PokerHomeInner() {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4rem' }}>
       <div style={{ width: '100%', maxWidth: '500px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '0.5rem', border: '1px solid #eee' }}>
-        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>{isJoinMode ? 'Join Poker Room' : 'Create Poker Room'}</h2>
+        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>{isJoinMode ? 'Join Room' : 'Create Room'}</h2>
 
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem' }}>

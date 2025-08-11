@@ -55,6 +55,8 @@ export default function PokerRoom() {
   // Store only this user's vote locally until reveal
   const [votes, setVotes] = useState<{ [name: string]: number | null }>({});
   const [myVote, setMyVote] = useState<number | null>(null);
+  // For instant UI feedback on vote selection (UI only)
+  const [selectedVote, setSelectedVote] = useState<number | null>(null); // to show the highlight for slected vote-val button
   const ablyRef = useRef<any | null>(null);
   const channelRef = useRef<any | null>(null);
   // --- Fix for stale closure: always use latest value in Ably event handlers ---
@@ -144,6 +146,7 @@ export default function PokerRoom() {
           setRevealEnabled(!!(msg.data && (msg.data.enabled || msg.data.reveal)));
           if (msg.data && msg.data.enabled) {
             setVotes({}); // Clear votes on new round
+            setSelectedVote(null); // clear selection on new round
             revealActive = false;
             console.log('[Ably] New round started, votes cleared');
           }
@@ -249,6 +252,7 @@ export default function PokerRoom() {
       channelRef.current.publish('voting-state', { enabled: true, reveal: false });
     }
     setMyVote(null);
+    setSelectedVote(null); // Reset highlight on new round
     // Do NOT setVotingEnabled or setRevealEnabled here; rely on Ably event for all clients
   };
 
@@ -263,6 +267,7 @@ export default function PokerRoom() {
 
   // Handler for voting
   const handleVote = (vote: number) => {
+    setSelectedVote(vote); // UI highlight only
     console.log("cyk--10-1 > handleVote", {vote, myVote, votes, votingEnabled, userName});
     if (!votingEnabled || !userName) return;
     setMyVote(vote);
@@ -336,11 +341,11 @@ export default function PokerRoom() {
 
       {/* voting cards */}
       <div className="card" style={{ marginTop: '1.5rem' }}>
-        {[0, 1, 2, 3, 5, 8, 13, 21].map((val) => (
+        {[0, 1, 2, 3, 5, 8, 13, 21, 34].map((val) => (
           <button
             key={val}
             style={{ marginRight: '0.5rem', paddingLeft: '0.5rem' }}
-            className="vote-btn"
+            className={`vote-btn${selectedVote === val ? ' vote-btn-selected' : 'dummy-class'}`}
             // disabled={!votingEnabled || myVote !== null} // this is for one time selection of vote-val
             disabled={!votingEnabled}
             onClick={() => handleVote(val)}

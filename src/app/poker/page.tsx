@@ -67,15 +67,16 @@ function PokerHomeInner() {
 
     const finalRoomName = roomName || roomId;
 
-    sessionStorage.setItem(
-      'pokerRoomData',
-      JSON.stringify({
-        roomId,
-        roomName: finalRoomName,
-        userName,
-        isHost: !isJoinMode, // true if creating, false if joining
-      })
-    );
+    const sessionObj: any = {
+      roomId,
+      roomName: finalRoomName,
+      userName
+    };
+    // Only set isHost if creating (not joining)
+    if (!isJoinMode) {
+      sessionObj.isHost = true;
+    }
+    sessionStorage.setItem('pokerRoomData', JSON.stringify(sessionObj));
 
     router.push(`/poker/${roomId}`);
   };

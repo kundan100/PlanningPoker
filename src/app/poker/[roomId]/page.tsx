@@ -152,6 +152,7 @@ export default function PokerRoom() {
           if (msg.data && msg.data.enabled) {
             setVotes({}); // Clear votes on new round
             setSelectedVote(null); // clear selection on new round
+            setVotesStatus({}); // Clear votes status on new round
             revealActive = false;
             console.log('[Ably] New round started, votes cleared');
           }
